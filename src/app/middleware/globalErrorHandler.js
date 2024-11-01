@@ -80,7 +80,7 @@ const globalErrorHandler = (error, req, res, next) => {
     (error instanceof mongooseError && errorHandlers.mongooseError);
 
   if (errorType) {
-    ({ statusCode, message, errorMessages } = errorT-ype());
+    ({ statusCode, message, errorMessages } = errorType());
   }
 
   // Ensure valid HTTP status code
