@@ -58,7 +58,7 @@ const otpResendTemp = (data) =>
               <div class="container">
                   <h1>Hello, ${data.user}</h1>
                   <p>We're sending you this message because you've requested to receive a new OTP code.</p>
-                  <p>Your new verification code is:</p>
+                  <p>Your new code is:</p>
                   <p class="code">${data.code}</p>
                   <p>This code will be valid for the next <strong>${data.expiresIn} minutes</strong>.</p>
                   <p>If you did not request this code, please disregard this message. For assistance, reach out to us.</p>
