@@ -3,14 +3,14 @@ const cron = require("node-cron");
 const { status } = require("http-status");
 
 const ApiError = require("../../../error/ApiError");
+const Auth = require("./Auth");
+const User = require("../user/User");
+const Admin = require("../admin/Admin");
 const config = require("../../../config");
 const { jwtHelpers } = require("../../../helper/jwtHelpers");
 const { ENUM_USER_ROLE } = require("../../../util/enum");
 const { logger } = require("../../../shared/logger");
-const Auth = require("./Auth");
 const codeGenerator = require("../../../util/codeGenerator");
-const User = require("../user/User");
-const Admin = require("../admin/Admin");
 const validateFields = require("../../../util/validateFields");
 const EmailHelpers = require("../../../util/emailHelpers");
 
@@ -24,20 +24,6 @@ const registrationAccount = async (payload) => {
     "role",
     "name",
   ]);
-
-  if (!Object.values(ENUM_USER_ROLE).includes(role))
-    throw new ApiError(status.BAD_REQUEST, "Invalid role");
-  if (password !== confirmPassword)
-    throw new ApiError(
-      status.BAD_REQUEST,
-      "Password and Confirm Password didn't match"
-    );
-
-  const existingAuth = await Auth.findOne({ email }).lean();
-  if (existingAuth?.isActive)
-    throw new ApiError(status.BAD_REQUEST, "Email already exists");
-  if (existingAuth && !existingAuth.isActive)
-    return { message: "Already have an account. Please activate" };
 
   const { code: activationCode, expiredAt: activationCodeExpire } =
     codeGenerator(3);
@@ -57,8 +43,33 @@ const registrationAccount = async (payload) => {
     ),
   };
 
-  if (role !== ENUM_USER_ROLE.ADMIN)
-    EmailHelpers.sendActivationEmail(email, data);
+  if (!Object.values(ENUM_USER_ROLE).includes(role))
+    throw new ApiError(status.BAD_REQUEST, "Invalid role");
+  if (password !== confirmPassword)
+    throw new ApiError(
+      status.BAD_REQUEST,
+      "Password and Confirm Password didn't match"
+    );
+
+  const user = await Auth.findOne({ email });
+  if (user) {
+    const message = user.isActive
+      ? "Account active. Please Login"
+      : "Already have an account. Please activate";
+
+    if (!user.isActive) {
+      user.activationCode = activationCode;
+      user.activationCodeExpire = activationCodeExpire;
+      await user.save();
+
+      EmailHelpers.sendOtpResendEmail(email, data);
+    }
+
+    return {
+      isActive: user.isActive,
+      message,
+    };
+  }
 
   const auth = await Auth.create(authData);
 
@@ -71,28 +82,13 @@ const registrationAccount = async (payload) => {
   if (role === ENUM_USER_ROLE.ADMIN) await Admin.create(userData);
   else await User.create(userData);
 
-  return { message: "Account created successfully. Please check your email" };
-};
+  if (role !== ENUM_USER_ROLE.ADMIN)
+    EmailHelpers.sendActivationEmail(email, data);
 
-const resendActivationCode = async (payload) => {
-  const email = payload.email;
-
-  const user = await Auth.isAuthExist(email);
-  if (!user) throw new ApiError(status.BAD_REQUEST, "Email not found!");
-
-  const { code: activationCode, expiredAt: activationCodeExpire } =
-    codeGenerator(3);
-  const data = {
-    user: user.name,
-    code: activationCode,
-    expiresIn: Math.round((activationCodeExpire - Date.now()) / (60 * 1000)),
+  return {
+    isActive: false,
+    message: "Account created successfully. Please check your email",
   };
-
-  user.activationCode = activationCode;
-  user.activationCodeExpire = activationCodeExpire;
-  await user.save();
-
-  EmailHelpers.sendOtpResendEmail(email, data);
 };
 
 const activateAccount = async (payload) => {
@@ -369,7 +365,6 @@ const AuthService = {
   resetPassword,
   activateAccount,
   forgetPassOtpVerify,
-  resendActivationCode,
 };
 
 module.exports = { AuthService };

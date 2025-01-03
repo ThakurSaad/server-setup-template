@@ -1,24 +1,19 @@
 const { AuthService } = require("./auth.service");
 const sendResponse = require("../../../shared/sendResponse");
-const catchAsync = require("../../../shared/catchasync");
+const catchAsync = require("../../../shared/catchAsync");
 const config = require("../../../config");
 
 const registrationAccount = catchAsync(async (req, res) => {
   const result = await AuthService.registrationAccount(req.body);
 
-  sendResponse(res, {
-    statusCode: 200,
-    success: true,
-    message: result.message || "Something went wrong",
-  });
-});
+  const isSuccess =
+    result.message === "Account created successfully. Please check your email";
 
-const resendActivationCode = catchAsync(async (req, res) => {
-  await AuthService.resendActivationCode(req.body);
   sendResponse(res, {
-    statusCode: 200,
-    success: true,
-    message: "Resent successfully",
+    statusCode: isSuccess ? 200 : 400,
+    success: isSuccess,
+    message: result.message || "Something went wrong",
+    data: result,
   });
 });
 
@@ -102,7 +97,6 @@ const AuthController = {
   forgotPass,
   resetPassword,
   forgetPassOtpVerify,
-  resendActivationCode,
 };
 
 module.exports = { AuthController };
