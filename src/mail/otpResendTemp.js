@@ -59,13 +59,13 @@ const otpResendTemp = (data) =>
                   <h1>Hello, ${data.user}</h1>
                   <p>We're sending you this message because you've requested to receive a new OTP code.</p>
                   <p>Your new code is:</p>
-                  <p class="code">${data.code}</p>
-                  <p>This code will be valid for the next <strong>${data.expiresIn} minutes</strong>.</p>
+                  <p class="code">${data.activationCode}</p>
+                  <p>This code will be valid for the next <strong>${data.activationCodeExpire} minutes</strong>.</p>
                   <p>If you did not request this code, please disregard this message. For assistance, reach out to us.</p>
-                  <p>Thank you,<br>Your TrackTrek Team</p>
+                  <p>Thank you,<br>Your Tidy Bity Team</p>
               </div>
               <div class="footer">
-                  <p>&copy; TrackTrek - All Rights Reserved.</p>
+                  <p>&copy; Tidy Bity - All Rights Reserved.</p>
                   <p>For support, contact us at <a href="mailto:support@company.com">support@company.com</a></p>
               </div>
           </body>
