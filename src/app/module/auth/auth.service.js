@@ -9,7 +9,7 @@ const Admin = require("../admin/Admin");
 const config = require("../../../config");
 const { jwtHelpers } = require("../../../helper/jwtHelpers");
 const { ENUM_USER_ROLE } = require("../../../util/enum");
-const { logger } = require("../../../shared/logger");
+const { logger, errorLogger } = require("../../../shared/logger");
 const codeGenerator = require("../../../util/codeGenerator");
 const validateFields = require("../../../util/validateFields");
 const EmailHelpers = require("../../../util/emailHelpers");
@@ -259,7 +259,10 @@ const resetPassword = async (payload) => {
   if (!auth.isVerified)
     throw new ApiError(status.FORBIDDEN, "Please complete OTP verification");
 
-  const hashedPassword = await hashPass(newPassword);
+  const hashedPassword = await bcrypt.hash(
+    newPassword,
+    Number(config.bcrypt_salt_rounds)
+  );
 
   await Auth.updateOne(
     { email },
@@ -342,10 +345,6 @@ const updateFieldsWithCron = async (check) => {
     );
 };
 
-const hashPass = async (newPassword) => {
-  return await bcrypt.hash(newPassword, Number(config.bcrypt_salt_rounds));
-};
-
 // Unset activationCode activationCodeExpire field for expired activation code
 // Unset isVerified, verificationCode, verificationCodeExpire field for expired verification code
 cron.schedule("* * * * *", async () => {
@@ -353,7 +352,7 @@ cron.schedule("* * * * *", async () => {
     updateFieldsWithCron("activation");
     updateFieldsWithCron("verification");
   } catch (error) {
-    logger.error("Error removing expired code:", error);
+    errorLogger.error("Error removing expired code:", error);
   }
 });
 
